@@ -96,10 +96,12 @@ fuckinbuggyassgo();
       // Your WebGPU code will begin here!
 
 if (!navigator.gpu) {
+document.body.innerHTML="Sorry you got some broken shii";
 throw new Error('WebGPU not supported on this browser.');
 }
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
+document.body.innerHTML="You got noo GPU get outa here";
   throw new Error('No appropriate GPUAdapter found.');
 }
 const device = await adapter.requestDevice();
