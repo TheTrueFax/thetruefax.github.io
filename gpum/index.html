@@ -102,6 +102,7 @@ throw new Error('WebGPU not supported on this browser.');
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
 document.body.innerHTML="You got noo GPU get outa here";
+  location.href="https://thetruefax.github.io/gpunom😥";
   throw new Error('No appropriate GPUAdapter found.');
 }
 const device = await adapter.requestDevice();
