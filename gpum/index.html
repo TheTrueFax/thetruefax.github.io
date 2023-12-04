@@ -182,23 +182,23 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
 let mxitr = 1000;
 
-let vs = f32(${vs});
-let vx = f32(${vx});
-let vy = f32(${vy});
+let vs = f64(${vs});
+let vx = f64(${vx});
+let vy = f64(${vy});
 
 //let x0 = map(input.cell.x,0,grid.x,(-2 * vs )+vx,(0.47 * vs)+vx);
 //let y0 = map(input.cell.y,0,grid.y,(-1.12 * vs )+vy,(1.12 *vs)+vy);
 
-let x0 = f32(input.cell.x)/(grid.x) * f32(((0.47 * vs)+vx)-f32((-2 * vs )+vx)) + f32((-2 * vs )+vx);
+let x0 = f64(input.cell.x)/(grid.x) * f64(((0.47 * vs)+vx)-f64((-2 * vs )+vx)) + f64((-2 * vs )+vx);
 
-let y0 = (input.cell.y)/(grid.y) * f32(((-1.12 * vs )+vy) - ((1.12 * vs)+vy) ) + f32((1.12 * vs)+vy);
+let y0 = f64((input.cell.y)/(grid.y) * f64(((-1.12 * vs )+vy) - ((1.12 * vs)+vy) ) + f64((1.12 * vs)+vy));
 
-var x = f32(0);
-var y = f32(0);
+var x = f64(0);
+var y = f64(0);
 var itr = 0;
-var xtemp = f32(0);
+var xtemp = f64(0);
 while (x*x + y*y <= 2*2 && itr < mxitr) {
-    xtemp = f32(x*x - y*y) + f32(x0);
+    xtemp = f64(x*x - y*y) + f32(x0);
     y = 2*x*y + y0;
     x = xtemp;
     itr += 1;
@@ -211,9 +211,9 @@ while (x*x + y*y <= 2*2 && itr < mxitr) {
   } else {
 
 if (itr > 15) {
-rt = vec4f(0,((f32(itr)-15)/985)+0.5,0,1);
+rt = vec4f(0,((f64(itr)-15)/985)+0.5,0,1);
 } else{
-rt = vec4f(f32(itr)+0.5,0,f32(itr)/15,1);
+rt = vec4f(f64(itr)+0.5,0,f32(itr)/15,1);
 
 }
 
