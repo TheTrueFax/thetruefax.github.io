@@ -189,9 +189,9 @@ let vy = u32(${vy});
 //let x0 = map(input.cell.x,0,grid.x,(-2 * vs )+vx,(0.47 * vs)+vx);
 //let y0 = map(input.cell.y,0,grid.y,(-1.12 * vs )+vy,(1.12 *vs)+vy);
 
-let x0 = u32(input.cell.x)/(grid.x) * u32(((0.47 * vs)+vx)-u32((-2 * vs )+vx)) + u32((-2 * vs )+vx);
+let x0 = u32(input.cell.x)/u32(grid.x) * u32(((0.47 * vs)+vx)-u32((-2 * vs )+vx)) + u32((-2 * vs )+vx);
 
-let y0 = u32((input.cell.y)/(grid.y) * u32(((-1.12 * vs )+vy) - ((1.12 * vs)+vy) ) + u32((1.12 * vs)+vy));
+let y0 = u32((input.cell.y)/u32(grid.y) * u32(((-1.12 * vs )+vy) - ((1.12 * vs)+vy) ) + u32((1.12 * vs)+vy));
 
 var x = u32(0);
 var y = u32(0);
