@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>My (not) first webpage!</title>
+<style>
+    body {
+    margin:0;
+    padding:0;
+}
+
+@keyframes rainbow {
+  0% {color:red;}
+  30% {color:yellow;}
+  60% {color:lime;}
+  90% {color:blue;}
+  100% {color:red;}
+}
+
+h1 {
+  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  transition: all .2s ease;
+  animation: rainbow infinite 2s linear;
+  z-index:1000;
+}
+
+
+#drawings {
+  position:fixed;
+  top:0px;
+  left:0px;
+
+}
+  
+#noselect {
+  background:white;
+  border:#333 2px solid;
+  padding:10px;
+  border-radius:10px;
+  position:fixed;
+  left:20px;
+  top:20px;
+  z-index:10;
+}
+
+#hideshow {
+  position:absolute;
+  top:10px;
+  right:10px;
+  padding:5px;
+  border:#f33 solid 2px;
+  border-radius:5px;
+  font-weight:bold;
+  cursor:pointer;
+  background:#fcc;
+}
+  #hideshow:hover {
+    background:#fbb;
+  }
+#check {
+  display:none;
+}
+
+.nodis {
+  display:none;
+}
+</style>
+</head>
+<body>
+    <canvas id="drawings"></canvas>
+
+  <div id="noselect">
+    <div id="displaychanges">
+    <h1 id="sdat">Connecting...</h1>
+    <h3>WASD to move, E&Q to zoom, FPS: <span id="fps">0</span></h3>
+    (If your total line thickness is more than 999 pixels it will be capped)<br>
+    Line thickness: <input id="thick" type="number" min="0" value="10">&nbsp;&nbsp;&nbsp;Line color: <input type="color" id="col"><br>
+    Go to position: <input id="posx" type="number" value="0">X <input id="posy" type="number" value="0">Y <button onclick="campos=[parseInt(document.body.querySelector('#posx').value),parseInt(document.body.querySelector('#posy').value)];drawIt();">Go</button>
+      </div>
+    <label onclick="if(this.childNodes[1].checked){document.body.querySelector('#displaychanges').className='nodis';this.childNodes[0].innerHTML='&gt;';this.style.position='static'}else{document.body.querySelector('#displaychanges').className='';this.childNodes[0].innerHTML='&lt;';this.style.position='absolute'}" id="hideshow"><span><</span><input id="check" type="checkbox"></label>
+    </div>
+    <script>
+        const canvas = document.body.querySelector("#drawings");
+        canvas.width=window.innerWidth;
+        canvas.height=window.innerHeight;
+
+        var DEBUG = false;
+
+        var serverRestartTimestamp;
+        var timeLeft = [0,0,0];
+        var sdat = document.body.querySelector("#sdat");
+
+        var campos = [0,0];
+        var zoom = 1;
+
+        var tillPoint=5;
+
+        var canDraw=false;
+
+        const ws = new WebSocket("https://horsfha25250-project.onrender.com");
+
+        var drawing = [];
+        ws.onopen = () => {
+            console.log('Connected to server');
+            canDraw=true;
+            alert("Connected, draw away!");
+            ws.send("ping");
+        };
+
+        function handleTimeout(){
+          alert("Server restart underway...");
+          location.reload();
+        }
+
+        function startCounting(){
+          timeLeft[0]-=1;
+          
+          if (timeLeft[0]<0){
+            timeLeft[1]-=1;
+            timeLeft[0]=59;
+          }
+
+          if (timeLeft[1]<0){
+            timeLeft[2]-=1;
+            timeLeft[1]=59;
+          }
+
+          if (timeLeft[2]<0){
+            handleTimeout();
+          timeLeft[2]=Infinite;
+          }
+
+          sdat.innerHTML=`Resets in: ${timeLeft[2]}h ${timeLeft[1]}m ${timeLeft[0]}s`;
+          setTimeout(startCounting,1000);
+        }
+      var col = document.body.querySelector("#col");
+      var thick = document.body.querySelector("#thick");
+
+        ws.onmessage = (event) => {
+            if (event.data[0]=="."){
+              let splitted = event.data.split(".")[1];
+              serverRestartTimestamp=splitted;
+              let timestamp = Date.now();
+              let diff = splitted-timestamp;
+              console.log("diff:"+diff);
+
+              let hours = Math.floor(diff/(60000*60));
+              console.log("hours: "+hours);
+
+              diff-=hours*(60000*60);
+
+              let mins = Math.floor(diff/60000);
+              console.log("mins: "+mins);
+
+              diff-=mins*60000;
+
+              let secs = Math.floor(diff/1000);
+              console.log("secs: "+secs);
+
+              timeLeft=[secs,mins,hours];
+              startCounting();
+
+                return;
+            }
+
+            if (event.data=="pong"){
+              setTimeout(()=>{ws.send("ping")},3000);
+              return;
+            }
+          
+            drawing=drawing.concat(JSON.parse(event.data));
+            console.log(JSON.parse(event.data));
+            drawIt();
+        };
+
+        ws.onclose = () => {
+            console.log('Disconnected from server');
+            sdat.innerHTML="Disconnected. :( <button onclick='canDraw=true;'>Draw offline?</button>";
+            canDraw=false;
+            alert("Disconnected from server.");
+        };
+
+        var ctx = canvas.getContext("2d");
+
+        function getLine(token,drawing){
+            for (let i=0;i<drawing.length;i++){
+                if (drawing[i].id==token){
+                    return drawing[i];
+                }
+            }
+        }
+        function generateRandomToken(length = 5) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0987654321';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+        
+        var point = (x,y)=>{return {x:x,y:y}};
+        var line = (id,col,thick)=>{return {id:id,col:col,thick:thick,contents:[]}};
+
+
+        var lastmousepos = [0,0];
+
+        var mode = 0;
+        // 0 is draw 1 is delete 2 is move
+        var selectedline = "";
+        var mouse = [0,0];
+        var mouseDown = false;
+
+        function clr(){
+          ws.send("c");
+          location.reload();
+        }
+      
+        canvas.addEventListener("mousemove",(e)=>{
+            if (canDraw){
+            mouse = [(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]];
+            if (mouseDown){
+                getLine(selectedline,drawing).contents.push(point(mouse[0],mouse[1]));
+                //drawIt();
+                drawLastLine();
+                
+              tillPoint=5;
+            }
+            }
+            lastmousepos = [e.clientX,e.clientY];
+        });
+        var dist = (x1,y1,x2,y2)=>{return Math.sqrt(Math.pow(x2-x1,2)+Math.pow(y2-y1,2))};
+
+        //finds the dotproduct of 2 vectors
+        var dp = (x1,y1,x2,y2)=>{return (x1*x2+y1*y2)/(Math.sqrt(x1*x1+y1*y1)*Math.sqrt(x2*x2+y2*y2))};
+        canvas.addEventListener("mousedown",(e)=>{
+            if (canDraw){
+            lastmousepos = [(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]];
+            mouseDown=true;
+            let token = generateRandomToken();
+            if (thick.value/zoom>999){
+              drawing.push(line(token,col.value,999));
+            } else {
+              drawing.push(line(token,col.value,thick.value/zoom));
+            }
+            selectedline=token;
+            }
+        });
+        var lerp = (x1,y1,x2,y2,amount)=>{return [(x2-x1)*amount+x1,(y2-y1)*amount+y1]};
+        canvas.addEventListener("mouseup",()=>{
+            if (canDraw){
+            mouseDown=false;
+            if (drawing[drawing.length-1].contents.length==0){
+                drawing.pop();
+            } else {
+
+                // Try to decrease point count so the server and the website is less laggy
+                
+                let dislis = [];
+                let totaldis = 0;
+                let contents = drawing[drawing.length-1].contents;
+                for (let i=0;i<drawing[drawing.length-1].contents.length-1;i++){
+
+                  dislis.push(dist(contents[i].x,contents[i].y,contents[i+1].x,contents[i+1].y));
+                  totaldis+=dislis[dislis.length-1];
+                }
+                
+                let segmentLength = 5/zoom;
+
+                let output = [];
+                let elapsed = segmentLength;
+
+                let alongline = 0;
+
+                //resample points to have equal segment length
+                for (let i=0;i<dislis.length;i++){
+                  if (dislis[i]<elapsed){
+                    elapsed-=dislis[i];
+                  } else {
+                    alongline = elapsed/dislis[i];
+                    let lerpedpos = lerp(contents[i].x,contents[i].y,contents[i+1].x,contents[i+1].y,alongline);
+                    output.push(point(lerpedpos[0],lerpedpos[1]));
+                    elapsed = segmentLength-(elapsed-dislis[i]);
+                  }
+                }
+                console.log(output)
+                
+          
+                let ending = [output[0]];
+
+                // Delete points that have a dot product less than -threshold (aka remove complicated biz from straight lines)
+                let threshold = 0.99;
+                
+                for (let i=1;i<output.length-1;i++){
+                  if (dp(output[i-1].x-output[i].x,output[i-1].y-output[i].y,output[i+1].x-output[i].x,output[i+1].y-output[i].y)>-threshold){
+                    ending.push(output[i]);
+                  }
+                }
+                ending.push(output[output.length-1]);
+              
+              console.log((ending.length/contents.length)*100+"% of original line size")
+              drawing[drawing.length-1].contents=ending;
+              
+              drawIt();
+              
+                ws.send(JSON.stringify(drawing[drawing.length-1]));
+            }
+            }
+        });
+
+        //   (X+campos[0]-canvas.width/2)*zoom+canvas.width/2 = Y
+
+        // 1+2-3=0    (Y-canvas.width/2)/zoom+canvas.width/2-campos[0]
+
+        function drawLastLine(){
+            let i=drawing.length-1;
+
+                
+                ctx.lineWidth=drawing[i].thick*zoom;
+                ctx.strokeStyle=drawing[i].col;
+                ctx.beginPath();
+                ctx.moveTo((drawing[i].contents[0].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].contents[0].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
+                for (let x=0;x<drawing[i].contents.length;x++){
+                    ctx.lineTo((drawing[i].contents[x].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].contents[x].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
+                }
+                ctx.stroke();
+
+                if (DEBUG){
+                ctx.fillStyle="#f00";
+                for (let x=0;x<drawing[i].contents.length;x++){
+                    ctx.fillRect((drawing[i].contents[x].x+campos[0]-canvas.width/2)*zoom+canvas.width/2-drawing[i].thick*zoom/6,(drawing[i].contents[x].y+campos[1]-canvas.height/2)*zoom+canvas.height/2-drawing[i].thick*zoom/6,drawing[i].thick*zoom/3,drawing[i].thick*zoom/3);
+                }
+                }
+
+                    /*ctx.fillStyle="#f00";
+              for (let x=0;x<drawing[i].contents.length;x++){
+                    ctx.fillRect(drawing[i].contents[x].x+campos[0],drawing[i].contents[x].y+campos[1],10,10);
+                }*/
+            
+        }
+  
+      
+        function drawIt(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            for (let i=0;i<drawing.length;i++){
+
+                
+                ctx.lineWidth=drawing[i].thick*zoom;
+                ctx.strokeStyle=drawing[i].col;
+                if (drawing[i].contents.length>0){
+                ctx.beginPath();
+                ctx.moveTo((drawing[i].contents[0].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].contents[0].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
+                for (let x=0;x<drawing[i].contents.length;x++){
+                    ctx.lineTo((drawing[i].contents[x].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].contents[x].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
+                }
+                ctx.stroke();
+
+                if (DEBUG){
+                ctx.fillStyle="#f00";
+                for (let x=0;x<drawing[i].contents.length;x++){
+                    ctx.fillRect((drawing[i].contents[x].x+campos[0]-canvas.width/2)*zoom+canvas.width/2-drawing[i].thick*zoom/6,(drawing[i].contents[x].y+campos[1]-canvas.height/2)*zoom+canvas.height/2-drawing[i].thick*zoom/6,drawing[i].thick*zoom/3,drawing[i].thick*zoom/3);
+                }
+                }
+                }
+
+                    /*ctx.fillStyle="#f00";
+              for (let x=0;x<drawing[i].contents.length;x++){
+                    ctx.fillRect(drawing[i].contents[x].x+campos[0],drawing[i].contents[x].y+campos[1],10,10);
+                }*/
+            }
+        }
+
+        var kd = {};
+        document.body.addEventListener("keydown",(e)=>{
+          kd[e.key]=true;
+        });
+        document.body.addEventListener("keyup",(e)=>{
+          kd[e.key]=false;
+        });
+
+        let vel = [0,0];
+
+        let zoomvel = 0;
+
+        var times = [];
+        var fps;
+
+        var fpscount = document.body.querySelector("#fps");
+
+        var zoomspeed = 0.05;
+      
+
+        function tick() {
+          // calc FPS
+          const now = performance.now();
+
+          while (times.length > 0 && times[0] <= now - 1000) {
+            times.shift();
+          }
+
+          times.push(now);
+
+          fps = times.length;
+
+          fpscount.innerHTML = fps;
+          
+    
+          
+          let moveSpeed = 1/zoom;
+
+          
+
+          let refreshThreshold = 0.5/zoom;
+
+          if (Math.abs(vel[0])>refreshThreshold){
+            campos[0]+=vel[0];
+          }
+          if (Math.abs(vel[1])>refreshThreshold){
+            campos[1]+=vel[1];
+          }
+          if (Math.abs(vel[1])>refreshThreshold||Math.abs(vel[0])>refreshThreshold||Math.abs(zoomvel)>(0.005*zoom)){
+            drawIt();
+            zoom+=zoom/(10/zoomvel);
+          }
+
+          zoomvel*=0.9;
+          
+          if (kd["w"]){
+            vel[1]+=moveSpeed;
+          }else if (kd["s"]){
+            vel[1]-=moveSpeed;
+          }
+          if (kd["a"]){
+            vel[0]+=moveSpeed;
+          }else if (kd["d"]){
+            vel[0]-=moveSpeed;
+          }
+
+          if (kd["q"]){
+            //zoom-=zoom/(10/zoomspeed);
+            zoomvel-=zoomspeed;
+            drawIt();
+          }else if (kd["e"]){
+            //zoom+=zoom/(10/zoomspeed);
+            zoomvel+=zoomspeed;
+            drawIt();
+          }
+
+          vel[0]*=0.94;
+          vel[1]*=0.94;
+          
+          window.requestAnimationFrame(tick);
+        }
+      tick();
+
+    </script>
+</body>
+</html>
