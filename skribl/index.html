@@ -137,31 +137,8 @@ h1 {
       var thick = document.body.querySelector("#thick");
 
         ws.onmessage = (event) => {
-            if (event.data[0]=="."){
-              let splitted = event.data.split(".")[1];
-              serverRestartTimestamp=splitted;
-              let timestamp = Date.now();
-              let diff = splitted-timestamp;
-              console.log("diff:"+diff);
 
-              let hours = Math.floor(diff/(60000*60));
-              console.log("hours: "+hours);
-
-              diff-=hours*(60000*60);
-
-              let mins = Math.floor(diff/60000);
-              console.log("mins: "+mins);
-
-              diff-=mins*60000;
-
-              let secs = Math.floor(diff/1000);
-              console.log("secs: "+secs);
-
-              timeLeft=[secs,mins,hours];
-              startCounting();
-
-                return;
-            }
+            sdat.innerHTML="Connected";
 
             if (event.data=="pong"){
               setTimeout(()=>{ws.send("ping")},3000);
@@ -417,7 +394,7 @@ h1 {
           if (Math.abs(vel[1])>refreshThreshold){
             campos[1]+=vel[1];
           }
-          if (Math.abs(vel[1])>refreshThreshold||Math.abs(vel[0])>refreshThreshold||Math.abs(zoomvel)>(0.005*zoom)){
+          if (Math.abs(vel[1])>refreshThreshold||Math.abs(vel[0])>refreshThreshold||Math.abs(zoomvel)>(0.005)){
             drawIt();
             zoom+=zoom/(10/zoomvel);
           }
