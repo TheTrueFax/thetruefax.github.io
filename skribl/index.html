@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>My (not) first webpage!</title>
+<title>Skribl</title>
 <style>
     body {
     margin:0;
@@ -138,7 +138,13 @@ h1 {
 
         ws.onmessage = (event) => {
 
-            sdat.innerHTML="Connected";
+            if (event.data[0]=="u"){
+              //update user count
+              let a = event.data.split("u");
+              sdat.innerHTML="Connected, users: "+a[1];
+            
+            }
+
 
             if (event.data=="pong"){
               setTimeout(()=>{ws.send("ping")},3000);
