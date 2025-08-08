@@ -314,6 +314,7 @@ h1 {
                 
                 ctx.lineWidth=drawing[i].thick*zoom;
                 ctx.strokeStyle=drawing[i].col;
+                if (drawing[i].contents.length>0){
                 ctx.beginPath();
                 ctx.moveTo((drawing[i].contents[0].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].contents[0].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
                 for (let x=0;x<drawing[i].contents.length;x++){
@@ -327,6 +328,7 @@ h1 {
                     ctx.fillRect((drawing[i].contents[x].x+campos[0]-canvas.width/2)*zoom+canvas.width/2-drawing[i].thick*zoom/6,(drawing[i].contents[x].y+campos[1]-canvas.height/2)*zoom+canvas.height/2-drawing[i].thick*zoom/6,drawing[i].thick*zoom/3,drawing[i].thick*zoom/3);
                 }
                 }
+                  }
 
                     /*ctx.fillStyle="#f00";
               for (let x=0;x<drawing[i].contents.length;x++){
