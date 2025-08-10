@@ -99,7 +99,7 @@ h1 {
 
         var canDraw=false;
 
-        const ws = new WebSocket("https://horsfha25250-project.onrender.com");
+        var ws = new WebSocket("https://horsfha25250-project.onrender.com");
 
         var drawing = [];
         ws.onopen = () => {
@@ -184,7 +184,8 @@ h1 {
 }
         
         var point = (x,y)=>{return {x:x,y:y}};
-        var line = (id,col,thick)=>{return {id:id,col:col,thick:thick,contents:[]}};
+        var line = (id,col,thick)=>{return {id:id,type:"line",col:col,thick:thick,contents:[]}};
+        var text = (id,col,scale,contents,x,y)=>{return {x:x,y:y,id:id,col:col,type:"text",scale:scale,contents:contents}};
 
 
         var lastmousepos = [0,0];
@@ -195,6 +196,21 @@ h1 {
         var mouse = [0,0];
         var mouseDown = false;
 
+        var currentMode = "line";
+        var isTyping = false;
+        var currentText = "Text";
+
+        var settings = {
+          line: {
+            thick: 10,
+            color: "#000000"
+          },
+          text: {
+            scale: 20,
+            color: "#000000"
+          }
+        };
+
         function clr(){
           ws.send("c");
           location.reload();
@@ -203,7 +219,7 @@ h1 {
         canvas.addEventListener("mousemove",(e)=>{
             if (canDraw){
             mouse = [(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]];
-            if (mouseDown){
+            if (mouseDown&&currentMode=="line"){
                 getLine(selectedline,drawing).contents.push(point(mouse[0],mouse[1]));
                 //drawIt();
                 drawLastLine();
@@ -219,21 +235,31 @@ h1 {
         var dp = (x1,y1,x2,y2)=>{return (x1*x2+y1*y2)/(Math.sqrt(x1*x1+y1*y1)*Math.sqrt(x2*x2+y2*y2))};
         canvas.addEventListener("mousedown",(e)=>{
             if (canDraw){
+            let token = generateRandomToken();
+              if (currentMode=="line"){
             lastmousepos = [(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]];
             mouseDown=true;
-            let token = generateRandomToken();
-            if (thick.value/zoom>999){
-              drawing.push(line(token,col.value,999));
+            if (settings.line.thick/zoom>999){
+              drawing.push(line(token,settings.line.color,999));
             } else {
-              drawing.push(line(token,col.value,thick.value/zoom));
+              drawing.push(line(token,settings.line.color,settings.line.thick/zoom));
             }
             selectedline=token;
+              } else if (currentMode=="text") {
+                isTyping=true;
+                if (settings.text.scale/zoom>999){
+                  drawing.push(text(token,settings.text.color,999,"Text",(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]))
+                } else {
+                  drawing.push(text(token,settings.text.color,settings.text.scale/zoom,"Text",(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]));
+                }
+              }
             }
         });
         var lerp = (x1,y1,x2,y2,amount)=>{return [(x2-x1)*amount+x1,(y2-y1)*amount+y1]};
         canvas.addEventListener("mouseup",()=>{
             if (canDraw){
             mouseDown=false;
+            if (currentMode=="line"){
             if (drawing[drawing.length-1].contents.length==0){
                 drawing.pop();
             } else {
@@ -302,6 +328,7 @@ h1 {
                 ws.send(JSON.stringify(drawing[drawing.length-1]));
             }
             }
+            }
         });
 
         //   (X+campos[0]-canvas.width/2)*zoom+canvas.width/2 = Y
@@ -342,7 +369,8 @@ h1 {
             ctx.clearRect(0,0,canvas.width,canvas.height);
             for (let i=0;i<drawing.length;i++){
 
-                
+
+                if (drawing[i].type=="line"){
                 ctx.lineWidth=drawing[i].thick*zoom;
                 ctx.strokeStyle=drawing[i].col;
                 if (drawing[i].contents.length>0){
@@ -360,6 +388,12 @@ h1 {
                 }
                 }
                 }
+                } else if (drawing[i].type=="text"){
+                  // pee
+                  ctx.fillStyle=drawing[i].col;
+                  ctx.font = (drawing[i].scale*zoom)+"px sans-serif";
+                  ctx.fillText(drawing[i].contents,(drawing[i].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
+                }
 
                     /*ctx.fillStyle="#f00";
               for (let x=0;x<drawing[i].contents.length;x++){
@@ -370,7 +404,21 @@ h1 {
 
         var kd = {};
         document.body.addEventListener("keydown",(e)=>{
+          if (isTyping){
+            if (e.key.length<2){
+              currentText+=e.key;
+              drawing[drawing.length-1].contents=currentText;
+              drawIt();
+            } else if (e.key=="Enter"){
+              isTyping=false;
+            } else if (e.key=="Backspace"){
+              currentText=currentText.slice(0,currentText.length-1);
+              drawing[drawing.length-1].contents=currentText;
+              drawIt();
+            }
+          } else {
           kd[e.key]=true;
+          }
         });
         document.body.addEventListener("keyup",(e)=>{
           kd[e.key]=false;
