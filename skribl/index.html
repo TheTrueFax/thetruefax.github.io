@@ -252,6 +252,7 @@ h1 {
                 } else {
                   drawing.push(text(token,settings.text.color,settings.text.scale/zoom,"Text",(e.offsetX-canvas.width/2)/zoom+canvas.width/2-campos[0],(e.offsetY-canvas.height/2)/zoom+canvas.height/2-campos[1]));
                 }
+                drawIt();
               }
             }
         });
@@ -373,7 +374,7 @@ h1 {
                 if (drawing[i].type=="line"){
                 ctx.lineWidth=drawing[i].thick*zoom;
                 ctx.strokeStyle=drawing[i].col;
-                if (drawing[i].contents.length>0){
+                if (drawing[i].contents.length>0&&drawing[i].contents[0].x){
                 ctx.beginPath();
                 ctx.moveTo((drawing[i].contents[0].x+campos[0]-canvas.width/2)*zoom+canvas.width/2,(drawing[i].contents[0].y+campos[1]-canvas.height/2)*zoom+canvas.height/2);
                 for (let x=0;x<drawing[i].contents.length;x++){
@@ -411,6 +412,8 @@ h1 {
               drawIt();
             } else if (e.key=="Enter"){
               isTyping=false;
+              currentText="Text";
+              ws.send(JSON.stringify(drawing[drawing.length-1]));
             } else if (e.key=="Backspace"){
               currentText=currentText.slice(0,currentText.length-1);
               drawing[drawing.length-1].contents=currentText;
