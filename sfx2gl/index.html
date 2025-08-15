@@ -650,7 +650,7 @@ async function go() {
 
   //duration = audioBuffer.duration;
 
-  if (file){
+  if (!file){
     log("Please put in a .wav, .mp3 or any other sound files")
     return;
   }
@@ -1109,7 +1109,9 @@ async function go() {
 
     levelFile.levelNodes = endJson;
 
-    var asString = JSON.stringify(levelFile, null, 2);
+    var asString = "data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(levelFile, null, 2));
+
+    log('<a download="'+file.name+'(SFX2GL).json" href="'+asString+'">Download JSON file (import into grab-tools.live/editor)</a>')
 
 
     console.log(asString);
