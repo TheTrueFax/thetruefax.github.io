@@ -1,12 +1,14 @@
-<h1>SFX2GL</h1>
-Convert any sound files into grab levels.<br>Ajust values as needed if you want to change the result.<br><br>
+<h1>(cooler) SFX2GRAB</h1>
+Convert .wav files into grab levels.<br>Ajust values as needed if you want to change the result.<br><br>
 Not reccomended for complicated sounds such as music with multuple layers!!<br><br>* = Dont touch unless you know what you are doing<br>
 <br>
-<label><input id="check" type="checkbox">Delete unmatching samples*</label><br>
+<!--<label><input type="checkbox">Round unmatching pitches* (Sounds weird)</label><br>-->
 WAV file: <input id="mainfile" type="file"><br><br>
+<label>Cull pitches (reccomended): <input type="checkbox" id="cullp"></label><br>
+<label>Cull volumes*: <input type="checkbox" id="cullv"></label><br>
 Pitch samples: <input id="pSamples" type="number" value="40"><br>
 Intensity samples: <input id="lSamples" type="number" value="2"><br>
-Pitch rounding*: <input id="hzRound" value="1"><br>
+Pitch rounding*: <input id="hzRound" value="2"><br>
 Volume rounding*: <input id="volRound" value="0.01"><br>
 High pass filter: <input id="highPass" value="2000"><br>
 Volume cap: <input id="volcap" value="0.65"><br>
@@ -16,6 +18,8 @@ Logs:<br>
 
 
 <script>
+  var cullp = document.body.querySelector("#cullp");
+  var cullv = document.body.querySelector("#cullv");
     class baseComplexArray {
   constructor(other, arrayType = Float32Array) {
     if (other instanceof ComplexArray) {
@@ -304,8 +308,6 @@ function LowestOddFactor(n) {
     var hzRound = document.body.querySelector("#hzRound");
     var volRound = document.body.querySelector("#volround");
 
-    var del = document.body.querySelector("#check");
-
     var logs = document.body.querySelector("#logs");
 
     function log(thing){
@@ -326,7 +328,7 @@ function getSoundBlock(pitch,amplitude,name){
         "parameters": {
             "waveType": 2,
             "envelopeAttack": 0.1,
-            "envelopeSustain": 999,
+            "envelopeSustain": 5,
             "envelopeRelease": 0.1,
             "frequencyBase": pitch,
             "frequencyLimit": 35,
@@ -650,12 +652,6 @@ async function go() {
 
   //duration = audioBuffer.duration;
 
-  if (!file){
-    log("Please put in a .wav, .mp3 or any other sound files")
-    return;
-  }
-
-
   notes = await wavToPolyphonicNotes(file);
 
   console.log('Extracted notes:', notes);
@@ -717,26 +713,22 @@ async function go() {
     pitches.forEach((e,a)=>{bares.push(e[1])});
     log("Total pitch samples after rounding: "+bares.length)
 
-    console.log(bares)
-    //let kept = [];
-    if (del.checked){
-        let kept = [];
-        for (let i=0;i<notes.length;i++){
-        notes[i].pitch=roundToClosest(notes[i].pitch,bares);
-        if (bares.includes(notes[i].pitch)){
-            kept.push(notes[i]);
-        }
-        }
-        notes=kept;
-    } else {
+    let kept = [];
     for (let i=0;i<notes.length;i++){
+        if (cullp.checked){
+          if (bares.includes(notes[i].pitch)){
+            kept.push(notes[i]);
+          }
+        } else {
         notes[i].pitch=roundToClosest(notes[i].pitch,bares);
+        }
         // if (bares.includes(notes[i].pitch)){
         //     kept.push(notes[i]);
         // }
     }
+    if (cullp.checked){
+      notes=kept;
     }
-    //notes=kept;
     }
 
     log("Rounding volume samples");
@@ -750,7 +742,7 @@ async function go() {
         if (indexofit>-1){
             volumes[indexofit][0]+=1;
         } else {
-            volumes.push([1,notes[i].intensity]);
+            volumes.push([1,notes[i].intensity/4]);
         }
     }
     
@@ -768,22 +760,22 @@ async function go() {
     log("Total volume samples after rounding: "+bares.length)
 
     console.log(bares)
-    if (del.checked){
-        let kept = [];
-        for (let i=0;i<notes.length;i++){
-        notes[i].intensity=roundToClosest(notes[i].intensity,bares);
-        if (bares.includes(notes[i].intensity)){
-            kept.push(notes[i]);
-        }
-        }
-        notes=kept;
-    } else {
+    let kept = [];
     for (let i=0;i<notes.length;i++){
-        notes[i].intensity=roundToClosest(notes[i].intensity,bares);
+        if (cullv.checked) {
+          if (bares.includes(notes[i].intensity)){
+            console.log("asd");
+            kept.push(notes[i]);
+          }
+        } else {
+          notes[i].intensity=roundToClosest(notes[i].intensity,bares);
+        }
         // if (bares.includes(notes[i].pitch)){
         //     kept.push(notes[i]);
         // }
     }
+    if (cullv.checked) {
+      notes=kept;
     }
     }
 
@@ -803,43 +795,7 @@ async function go() {
                     "z": 1
                 },
                 "childNodes": []
-              },
-              "animations": [
-                {
-                    "name": "idle",
-                    "frames": [
-                        {
-                            "position": {
-                                "x": 0,
-                                "y": 0,
-                                "z": 0
-                            },
-                            "rotation": {
-                                "w": 1,
-                                "x": 0,
-                                "y": 0,
-                                "z": 0
-                            },
-                            "time": 0
-                        },
-                        {
-                            "position": {
-                                "x": duration,
-                                "y": 0,
-                                "z": 0
-                            },
-                            "rotation": {
-                                "w": 1,
-                                "x": 0,
-                                "y": 0,
-                                "z": 0
-                            },
-                            "time": duration
-                        }
-                    ],
-                    "speed": 1,
-                    "currentFrameIndex": 0
-                }]
+              }
     };
 
     /*
@@ -861,12 +817,12 @@ async function go() {
     log("Total complexity taken up by sound blocks: "+volumes.length*pitches.length*8);
 
     // Take the total notes and multiply by 2
-    log("Total complexity taken up by notes: "+notes.length*2);
+    //log("Total complexity taken up by notes: "+notes.length*2);
 
     // Total complexity taken up by triggers is just pitch length and volume length but with a different complexity
     log("Total complexity taken up by triggers: "+volumes.length*pitches.length*5);
 
-    log("<h2>Total complexity: "+(volumes.length*pitches.length*13+notes.length*2)+"</h2>")
+    log("<h2>Total complexity: "+(volumes.length*pitches.length*13)+"</h2>")
 
     const token = (len)=>{
       const chars="qwertyuiopasdfghjklzxcvbnmQWERTYUIOPLKJHGFDSAZXCVBNM1234567890";
@@ -886,14 +842,14 @@ async function go() {
         }
     }
 
-    const getBlockIndex = (pitch,volume)=>{
+    const getBlockIndex = (pitch,volume1)=>{
         let index = -1;
         soundBlocks.forEach((e,a)=>{
-            //console.log(pitch,e.levelNodeSound.parameters.frequencyBase,a)
-            if (pitch==e.levelNodeSound.parameters.frequencyBase && volume==e.levelNodeSound.volume){
+            if (pitch==e.levelNodeSound.parameters.frequencyBase && volume1==e.levelNodeSound.volume){
                 index=a;
             }
         });
+        console.log(index)
         return index;
     };
 
@@ -906,18 +862,19 @@ async function go() {
         });
         return index;
     }
-    const getVolumeSample = (volume)=>{
+    const getVolumeSample = (volume1)=>{
         let index=-1;
         volumes.forEach((e,a)=>{
-            if (e[1]==volume){
+            if (e[1]==volume1){
                 index=a;
             }
         });
         return index;
     }
-
-    const makeTrigger = (pitch,volume,x,y,isStop)=>{
-        console.log(getBlockIndex(pitch,volume))
+    var key=[];
+    const makeTrigger = (pitch,volume1,x,y,isStop)=>{
+        key.push(JSON.stringify([pitch,volume1,isStop]));
+      
         if (isStop){
             return {
                         "levelNodeTrigger": {
@@ -945,12 +902,31 @@ async function go() {
                             "triggerTargets": [
                                 {
                                     "triggerTargetSound": {
-                                        "objectID": getBlockIndex(pitch,volume)+1,
-                                        "mode": 1
+                                        "objectID": getBlockIndex(pitch,volume1)+1
                                     }
                                 }
                             ]
-                        }
+                        },
+                          "animations": [
+                {
+                    "name": "idle",
+                    "frames": [{
+                            "position": {
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": 0
+                        }],
+                    "speed": 1,
+                    "currentFrameIndex": 0
+                }]
                     };
         } else {
             return {
@@ -979,31 +955,175 @@ async function go() {
                             "triggerTargets": [
                                 {
                                     "triggerTargetSound": {
-                                        "objectID": getBlockIndex(pitch,volume)+1
+                                        "objectID": getBlockIndex(pitch,volume1)+1,
+                                        "mode":1
                                     }
                                 }
                             ]
-                        }
+                        },
+                          "animations": [
+                {
+                    "name": "idle",
+                    "frames": [{
+                            "position": {
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": 0
+                        }],
+                    "speed": 1,
+                    "currentFrameIndex": 0
+                }]
                     };
         }
     }
 
-    const pushTrigger = (pitch,volume,x,y) => {
-        triggerGroup.levelNodeGroup.childNodes.push(makeTrigger(pitch,volume,x,y,false));
-        triggerGroup.levelNodeGroup.childNodes.push(makeTrigger(pitch,volume,x,y,true));
+    const pushTrigger = (pitch,volume1,x,y) => {
+        triggerGroup.levelNodeGroup.childNodes.push(makeTrigger(pitch,volume1,x,y,false));
+        triggerGroup.levelNodeGroup.childNodes.push(makeTrigger(pitch,volume1,x,y,true));
+    }
+
+    // create a trigger block that acesses all the other ones
+    var trig1={
+                        "levelNodeTrigger": {
+                            "shape": 1000,
+                            "position": {
+                                "x": -5,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "scale": {
+                                "x": 1,
+                                "y": 1,
+                                "z": 1
+                            },
+                            "rotation": {
+                                "w": 1
+                            },
+                            "triggerSources": [
+                                {
+                                    "triggerSourceBasic": {
+                                        "type": 4
+                                    }
+                                }
+                            ],
+                            "triggerTargets": [
+                                
+                            ]
+                        }
+                    }
+
+    for (let i=soundBlocks.length+2;i<soundBlocks.length*2+2;i++){
+      trig1.levelNodeTrigger.triggerTargets.push({
+                                    "triggerTargetSound": {
+                                        "objectID": i,
+                                        "mode":1
+                                    }
+                                });
     }
 
     // Create all samples as triggers!
     for (let x=0;x<volumes.length;x++){
         for (let y=0;y<pitches.length;y++){
+            console.log(volumes)
             pushTrigger(pitches[y][1],volumes[x][1],x,y);
         }
     }
 
     var staticNoteGroup = []
+  var last=0;
 
     const makeStaticNote = (pitch,volume,startPos,endPos) => {
-        staticNoteGroup.push({
+      // .index refrence????
+      if (endPos>last){
+        last=endPos;
+      }
+        let idnex1 = key.indexOf(JSON.stringify([pitch,volume,false]));
+        let idnex2 = key.indexOf(JSON.stringify([pitch,volume,true]));
+
+        let trigs = triggerGroup.levelNodeGroup.childNodes;
+        // check frames
+      if (trigs[idnex1].animations[0].frames.length>0){
+        if (trigs[idnex1].animations[0].frames[trigs[idnex1].animations[0].frames.length-1].time>startPos){
+          console.error("AAAHHHAHAHHHHHH");
+          return;
+        }
+      if (trigs[idnex2].animations[0].frames[trigs[idnex2].animations[0].frames.length-1].time>endPos){
+          console.error("AAAHHHAHAHHHHHH on tha end one");
+        return;
+        }
+      }
+
+        // add frames
+        trigs[idnex1].animations[0].frames.push({
+                            "position": {
+                                "x": -1,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": startPos-0.01
+                        });
+      
+        trigs[idnex1].animations[0].frames.push({
+                            "position": {
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": startPos
+                        });
+        // end note
+        trigs[idnex2].animations[0].frames.push({
+                            "position": {
+                                "x": -1,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": endPos-0.01
+                        });
+      
+        trigs[idnex2].animations[0].frames.push({
+                            "position": {
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": endPos
+                        });
+                    
+        
+        /*staticNoteGroup.push({
             "levelNodeStatic": {
                 "shape": 1000,
                 "position": {
@@ -1012,9 +1132,9 @@ async function go() {
                     "z": getVolumeSample(volume)
                 },
                 "scale": {
-                    "x": 0.003,
-                    "y": 0.9,
-                    "z": 0.9
+                    "x": 0.03,
+                    "y": 1,
+                    "z": 1
                 },
                 "rotation": {
                     "w": 1
@@ -1032,44 +1152,49 @@ async function go() {
                     "z": getVolumeSample(volume)
                 },
                 "scale": {
-                    "x": 0.003,
-                    "y": 0.9,
-                    "z": 0.9
+                    "x": 0.03,
+                    "y": 1,
+                    "z": 1
                 },
                 "rotation": {
                     "w": 1
                 }
             }
-        });
+        });*/
     }
 
     console.log(getPitchSample(pitches[0][1]))
 
     // Create all notes as little blocks!
     for (let i=0;i<notes.length;i++){
-        // idk why but startTime and endTime have to be switched
-        makeStaticNote(notes[i].pitch,notes[i].intensity,notes[i].endTime,notes[i].startTime);
+        makeStaticNote(notes[i].pitch,notes[i].intensity,notes[i].startTime,notes[i].endTime);
     }
 
-    // add a stopping note to the end
-    staticNoteGroup.push({
-            "levelNodeStatic": {
-                "shape": 1000,
-                "position": {
-                    "x": duration,
-                    "y": pitches.length/2,
-                    "z": (volumes.length-1)/2
-                },
-                "scale": {
-                    "x": 0.07,
-                    "y": pitches.length,
-                    "z": volumes.length
-                },
-                "rotation": {
-                    "w": 1
-                }
-            }
-        });
+  let best=0;
+  let ind=0;
+        let trigs = triggerGroup.levelNodeGroup.childNodes;
+    for (let i=0;i<trigs.length;i++){
+      if (trigs[i].animations[0].frames.length>best){
+        ind=i;
+        best=trigs[i].animations[0].frames.length;
+      }
+      trigs[i].animations[0].frames.push({
+                            "position": {
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "rotation": {
+                                "w": 1,
+                                "x": 0,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "time": last
+                        });
+    }
+
+    log("Trigger frame count max (more than 500 wont work): "+trigs[ind].animations[0].frames.length)
 
     // and oh my god we are done!
     // all we have to do is add it all up!
@@ -1079,11 +1204,30 @@ async function go() {
     endJson = endJson.concat(triggerGroup);
     endJson = endJson.concat(staticNoteGroup);
 
+    // this is the trigger that basicly controls all of the others
+    endJson.push(trig1);
+    endJson.push({
+            "levelNodeSign": {
+                "position": {
+                    "x": -5,
+                    "y": 1,
+                    "z": 0
+                },
+                "rotation": {
+                    "w": 1,
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "text": "This trigger connects\nto all the other\nones."
+            }
+        })
+
     var levelFile = {
         "formatVersion": 12,
         "title": "New Level",
         "creators": ".index-editor, TheTrueFax's SFX2GRAB",
-        "description": ".index modding - grab-tools.live - thetruefax.github.io/sfx2gl",
+        "description": ".index modding - grab-tools.live - thetruefax.github.io/sfx2grab",
         "tags": [],
         "maxCheckpointCount": 10,
         "ambienceSettings": {
@@ -1109,9 +1253,15 @@ async function go() {
 
     levelFile.levelNodes = endJson;
 
-    var asString = "data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(levelFile, null, 2));
+    var asString = JSON.stringify(levelFile, null, 2);
 
-    log('<a download="'+file.name+'(SFX2GL).json" href="'+asString+'">Download JSON file (import into grab-tools.live/editor)</a>')
+      //const jsonBlob = new Blob([asString], { type: "application/json" });
+
+  console.log(encodeURIComponent(asString))
+    var encoded = encodeURIComponent(asString);
+    encoded = encoded.replaceAll("'","%27");
+  
+    log("<a href='data:application/json,"+encoded+"' download='"+file.name+".json'>Download</a>")
 
 
     console.log(asString);
