@@ -849,7 +849,6 @@ async function go() {
                 index=a;
             }
         });
-        console.log(index)
         return index;
     };
 
@@ -985,6 +984,20 @@ async function go() {
         }
     }
 
+    /*let usedPitches = [];
+    let allPitches = [];
+    for (let i=0;i<pitches.length;i++){
+      if (!usedPitches.includes(pitches[i][1])){
+      usedPitches.push(pitches[i][1]);
+      }
+    }
+    for (let i=0;i<notes.length;i++){
+      if (!allPitches.includes(notes[i].pitch)){
+      allPitches.push(notes[i].pitch);
+      }
+    }
+    console.log(usedPitches,allPitches)*/
+
     const pushTrigger = (pitch,volume1,x,y) => {
         triggerGroup.levelNodeGroup.childNodes.push(makeTrigger(pitch,volume1,x,y,false));
         triggerGroup.levelNodeGroup.childNodes.push(makeTrigger(pitch,volume1,x,y,true));
@@ -992,6 +1005,62 @@ async function go() {
 
     // create a trigger block that acesses all the other ones
     var trig1={
+                        "levelNodeTrigger": {
+                            "shape": 1000,
+                            "position": {
+                                "x": -5,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "scale": {
+                                "x": 1,
+                                "y": 1,
+                                "z": 1
+                            },
+                            "rotation": {
+                                "w": 1
+                            },
+                            "triggerSources": [
+                                {
+                                    "triggerSourceBasic": {
+                                        "type": 4
+                                    }
+                                }
+                            ],
+                            "triggerTargets": [
+                                
+                            ]
+                        }
+                    }
+  var trig2={
+                        "levelNodeTrigger": {
+                            "shape": 1000,
+                            "position": {
+                                "x": -5,
+                                "y": 0,
+                                "z": 0
+                            },
+                            "scale": {
+                                "x": 1,
+                                "y": 1,
+                                "z": 1
+                            },
+                            "rotation": {
+                                "w": 1
+                            },
+                            "triggerSources": [
+                                {
+                                    "triggerSourceBasic": {
+                                        "type": 4
+                                    }
+                                }
+                            ],
+                            "triggerTargets": [
+                                
+                            ]
+                        }
+                    }
+  var trig3={
                         "levelNodeTrigger": {
                             "shape": 1000,
                             "position": {
@@ -1027,18 +1096,31 @@ async function go() {
                                         "mode":1
                                     }
                                 });
+      trig2.levelNodeTrigger.triggerTargets.push({
+                                    "triggerTargetSound": {
+                                        "objectID": i,
+                                    }
+                                });
+      trig3.levelNodeTrigger.triggerTargets.push({
+                                    "triggerTargetSound": {
+                                        "objectID": i,
+                                        "mode":5
+                                    }
+                                });
     }
 
     // Create all samples as triggers!
     for (let x=0;x<volumes.length;x++){
         for (let y=0;y<pitches.length;y++){
-            console.log(volumes)
             pushTrigger(pitches[y][1],volumes[x][1],x,y);
         }
     }
 
     var staticNoteGroup = []
   var last=0;
+
+    let usedIdn=[];
+  let times = 0;
 
     const makeStaticNote = (pitch,volume,startPos,endPos) => {
       // .index refrence????
@@ -1047,6 +1129,10 @@ async function go() {
       }
         let idnex1 = key.indexOf(JSON.stringify([pitch,volume,false]));
         let idnex2 = key.indexOf(JSON.stringify([pitch,volume,true]));
+        if (!usedIdn.includes(idnex1)){usedIdn.push(idnex1)}
+        if (!usedIdn.includes(idnex2)){usedIdn.push(idnex2)}
+      times++;
+
 
         let trigs = triggerGroup.levelNodeGroup.childNodes;
         // check frames
@@ -1169,6 +1255,10 @@ async function go() {
     for (let i=0;i<notes.length;i++){
         makeStaticNote(notes[i].pitch,notes[i].intensity,notes[i].startTime,notes[i].endTime);
     }
+  console.log(usedIdn,times,notes.length)
+
+  var keptT = [];
+  var keptS = [];
 
   let best=0;
   let ind=0;
