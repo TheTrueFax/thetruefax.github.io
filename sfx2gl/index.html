@@ -1,5 +1,6 @@
 <h1>(cooler) SFX2GRAB</h1>
-Convert .wav files into grab levels.<br>Ajust values as needed if you want to change the result.<br><br>
+Convert .wav files into grab levels.<br>Ajust values as needed if you want to change the result.<br>
+<a href="https://wiki.grab-tools.live/wiki/SFX2GRAB" target="_blank">How to use</a><br><br>
 Not reccomended for complicated sounds such as music with multuple layers!!<br><br>* = Dont touch unless you know what you are doing<br>
 <br>
 <!--<label><input type="checkbox">Round unmatching pitches* (Sounds weird)</label><br>-->
@@ -901,7 +902,8 @@ async function go() {
                             "triggerTargets": [
                                 {
                                     "triggerTargetSound": {
-                                        "objectID": getBlockIndex(pitch,volume1)+1
+                                        "objectID": getBlockIndex(pitch,volume1)+1,
+                                        "mode":0
                                     }
                                 }
                             ]
