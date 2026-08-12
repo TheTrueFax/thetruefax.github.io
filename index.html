@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>things</title>
+    <style>
+        @keyframes fadeout {
+            from {opacity: 1}
+            to {opacity: 0}
+        }
+        body {
+            user-select: none;
+            width:100vw;
+            height:100vh;
+            margin:0;
+            padding:0;
+            overflow:hidden;
+            background-image: url("./punsishment.jpg");
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+        }
+        #UFO {
+            position:absolute;
+            top:0px;
+            left: 100%;
+            width: 40%;
+            height: 40%;
+            transition: left .3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <img src="./UFO.png" id="UFO">
+    <script src="main.js"></script>
+</body>
+</html>
